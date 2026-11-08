@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Athina 3D Eagle</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent;
+    }
+  </style>
+  <!-- Three.js minimal standalone build -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="container"></div>
+
+  <script>
+    // Constants from Mercy Eagle3D.tsx
+    const BROWN = 0x4a3323;
+    const DARK = 0x2b1d14;
+    const WHITE = 0xf3efe6;
+    const GOLD = 0xf5b301;
+
+    let currentState = "idle";
+    let accentColor = 0xf59e0b;
+    let isPaused = false;
+    let phase = 0;
+    let lastTime = performance.now();
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0.4, 4.2);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0); // Transparent background
+    document.getElementById("container").appendChild(renderer.domElement);
+
+    // Lighting (Warm spotlight + ambient)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    const spotLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+    spotLight.position.set(2, 4, 3);
+    scene.add(spotLight);
+
+    const fillLight = new THREE.DirectionalLight(0xddeeff, 0.4);
+    fillLight.position.set(-2, 1, 2);
+    scene.add(fillLight);
+
+    // Procedural Geometries (Exact from Mercy Eagle3D.tsx)
+    function createWingGeo() {
+      const pts = [
+        [0, 0.3], [0.7, 0.45], [1.4, 0.36], [2.0, 0.08], [2.25, -0.18],
+        [1.98, -0.24], [2.04, -0.42], [1.72, -0.4], [1.75, -0.56], [1.42, -0.5],
+        [1.4, -0.64], [1.06, -0.52], [0.7, -0.48], [0.3, -0.42], [0, -0.3]
+      ];
+      const shape = new THREE.Shape();
+      pts.forEach(([x, y], i) => {
+        if (i === 0) shape.moveTo(x, y);
+        else shape.lineTo(x, y);
+      });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+      geo.rotateX(Math.PI / 2);
+      return geo;
+    }
+
+    function createTailGeo() {
+      const shape = new THREE.Shape();
+      const pts = [
+        [-0.12, 0], [0.12, 0], [0.34, -0.62], [0.12, -0.7],
+        [0, -0.66], [-0.12, -0.7], [-0.34, -0.62]
+      ];
+      pts.forEach(([x, y], i) => {
+        if (i === 0) shape.moveTo(x, y);
+        else shape.lineTo(x, y);
+      });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: false });
+      geo.rotateX(Math.PI / 2);
+      return geo;
+    }
+
+    // Eagle Hierarchy
+    const root = new THREE.Group();
+    scene.add(root);
+
+    // Body
+    const bodyMat = new THREE.MeshStandardMaterial({ color: BROWN, flatShading: true, roughness: 0.8 });
+    const bodyGeo = new THREE.IcosahedronGeometry(1, 1);
+    const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+    bodyMesh.scale.set(0.5, 0.45, 0.95);
+    root.add(bodyMesh);
+
+    // Head Group
+    const head = new THREE.Group();
+    head.position.set(0, 0.32, 0.78);
+    root.add(head);
+
+    // Head Mesh (White feathers)
+    const headMat = new THREE.MeshStandardMaterial({ color: WHITE, flatShading: true, roughness: 0.6 });
+    const headMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), headMat);
+    headMesh.scale.set(0.34, 0.32, 0.38);
+    head.add(headMesh);
+
+    // Beak Mesh (Hooked Gold Cone)
+    const beakMat = new THREE.MeshStandardMaterial({ color: GOLD, flatShading: true, roughness: 0.4 });
+    const beakMesh = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.32, 5), beakMat);
+    beakMesh.position.set(0, -0.06, 0.38);
+    beakMesh.rotation.set(Math.PI / 2 + 0.35, 0, 0);
+    head.add(beakMesh);
+
+    // Eyes
+    const eyeMats = [];
+    [-1, 1].forEach(s => {
+      const eyeGroup = new THREE.Group();
+      eyeGroup.position.set(s * 0.17, 0.07, 0.24);
+
+      const eyeMat = new THREE.MeshStandardMaterial({ color: GOLD, emissive: accentColor, emissiveIntensity: 0.4 });
+      eyeMats.push(eyeMat);
+      const eyeBase = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), eyeMat);
+      eyeGroup.add(eyeBase);
+
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+      pupil.position.set(s * 0.012, 0, 0.035);
+      eyeGroup.add(pupil);
+
+      head.add(eyeGroup);
+    });
+
+    // Wings
+    const wingGeo = createWingGeo();
+    const wingMat = new THREE.MeshStandardMaterial({ color: BROWN, flatShading: true, side: THREE.DoubleSide, roughness: 0.85 });
+
+    const rightWing = new THREE.Group();
+    rightWing.position.set(0.32, 0.12, 0.15);
+    rightWing.add(new THREE.Mesh(wingGeo, wingMat));
+    root.add(rightWing);
+
+    const leftWing = new THREE.Group();
+    leftWing.position.set(-0.32, 0.12, 0.15);
+    leftWing.scale.set(-1, 1, 1);
+    leftWing.add(new THREE.Mesh(wingGeo, wingMat));
+    root.add(leftWing);
+
+    // Tail
+    const tailGeo = createTailGeo();
+    const tailMat = new THREE.MeshStandardMaterial({ color: WHITE, flatShading: true, side: THREE.DoubleSide });
+    const tailMesh = new THREE.Mesh(tailGeo, tailMat);
+    tailMesh.position.set(0, 0.02, -0.82);
+    tailMesh.rotation.set(0.15, 0, 0);
+    root.add(tailMesh);
+
+    // Talons
+    [-1, 1].forEach(s => {
+      const talon = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 4), new THREE.MeshStandardMaterial({ color: DARK, flatShading: true }));
+      talon.position.set(s * 0.16, -0.42, 0.1);
+      root.add(talon);
+    });
+
+    // Animation Loop with 30-40 FPS cap for battery efficiency
+    const FPS = 35;
+    const interval = 1000 / FPS;
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+      if (isPaused) return;
+
+      const delta = (currentTime - lastTime) / 1000;
+      if (delta < interval / 1000) return;
+      lastTime = currentTime;
+
+      const t = currentTime / 1000;
+
+      // State Configurations (from Mercy Eagle3D.tsx)
+      const configs = {
+        idle: { speed: 1.4, amp: 0.18, base: 0.05 },
+        listening: { speed: 1.8, amp: 0.12, base: 0.25 },
+        thinking: { speed: 7.0, amp: 0.55, base: 0.1 },
+        speaking: { speed: 3.2, amp: 0.32, base: 0.1 }
+      };
+
+      const cfg = configs[currentState] || configs.idle;
+      phase += delta * cfg.speed;
+      const flap = Math.sin(phase) * cfg.amp + cfg.base;
+
+      leftWing.rotation.z = flap;
+      rightWing.rotation.z = -flap;
+
+      root.position.y = Math.sin(t * 1.1) * 0.08 - Math.sin(phase) * cfg.amp * 0.1;
+      root.rotation.y = -0.55 + Math.sin(t * 0.4) * 0.18;
+      root.rotation.z = Math.sin(t * 0.7) * 0.05;
+
+      head.rotation.z = currentState === "listening" ? 0.25 : Math.sin(t * 0.9) * 0.05;
+      head.rotation.x = currentState === "speaking" ? Math.sin(t * 9.0) * 0.06 : 0;
+
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(animate);
+
+    // JavaScript Bridge API for Android
+    window.setAvatarState = function(state) {
+      if (["idle", "listening", "thinking", "speaking"].includes(state)) {
+        currentState = state;
+      }
+    };
+
+    window.setAccent = function(hexStr) {
+      const cleanHex = hexStr.replace("#", "0x");
+      accentColor = parseInt(cleanHex, 16);
+      eyeMats.forEach(m => { m.emissive.setHex(accentColor); });
+    };
+
+    window.pauseRendering = function() { isPaused = true; };
+    window.resumeRendering = function() { isPaused = false; lastTime = performance.now(); };
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

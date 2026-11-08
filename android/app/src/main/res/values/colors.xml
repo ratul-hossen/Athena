@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Exact Mercy Tokens -->
+    <color name="athina_bg">#000000</color>
+    <color name="athina_surface">#161617</color>
+    <color name="athina_surface_2">#1D1D1F</color>
+    <color name="athina_surface_3">#2C2C2E</color>
+    <color name="athina_text">#F5F5F7</color>
+    <color name="athina_muted">#86868B</color>
+    <color name="athina_accent">#F59E0B</color>
+    <color name="athina_danger">#FF6961</color>
+</resources>

@@ -1,0 +1,138 @@
+# ==============================================================================
+# ATHINA - GIT IGNORE DIRECTIVES
+# Covers Python Backend, Android Kotlin/Compose, Next.js Admin, and Private Secrets
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. CRITICAL SECRETS & CREDENTIALS (NEVER COMMIT)
+# ------------------------------------------------------------------------------
+*.env
+*.env.*
+!.env.example
+backend/.env
+admin/.env.local
+admin/.env.production
+admin/.env.development
+
+# Biometrics & Personal Face Templates (Strict On-Device Privacy)
+ratul_face_template.dat
+*.dat
+*.key
+*.pem
+*.cert
+*.keystore
+*.jks
+
+# ------------------------------------------------------------------------------
+# 2. PYTHON / BACKEND & ML
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local SQLite databases & dumps
+*.sqlite
+*.sqlite3
+*.db
+athina.db
+backups/
+*.sql
+*.sql.gz
+
+# ------------------------------------------------------------------------------
+# 3. ANDROID NATIVE & GRADLE
+# ------------------------------------------------------------------------------
+.gradle/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.cxx/
+android/captures/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Android Studio & IntelliJ IDEA
+.idea/
+*.iml
+.navigation/
+captures/
+output.json
+
+# ------------------------------------------------------------------------------
+# 4. NEXT.JS / ADMIN WEB & NODE
+# ------------------------------------------------------------------------------
+node_modules/
+admin/node_modules/
+admin/.next/
+admin/out/
+admin/.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------------------------
+# 5. OS & HARDWARE ARTIFACTS
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# ------------------------------------------------------------------------------
+# 6. LARGE ARCHIVES & TEMPORARY MEDIA
+# ------------------------------------------------------------------------------
+*.zip
+*.tar.gz
+*.rar
+*.7z
+backend/static/images/*.tmp
+
+# ------------------------------------------------------------------------------
+# 7. PRIVATE PERSONA & LARGE DATA FILES
+# ------------------------------------------------------------------------------
+mercy.txt
+
+# ------------------------------------------------------------------------------
+# 8. REFERENCE IMAGES (too large for Git — deploy via rsync/scp separately)
+# ------------------------------------------------------------------------------
+imagegen/curated/**/*.jpg
+imagegen/curated/**/*.jpeg
+imagegen/curated/**/*.png

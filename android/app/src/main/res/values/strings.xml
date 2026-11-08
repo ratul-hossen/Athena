@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Athina</string>
+    <string name="companion_tagline">Your personal AI companion</string>
+    <string name="composer_hint">Message Athina…</string>
+    <string name="thinking">Thinking…</string>
+    <string name="status_online">Online</string>
+</resources>

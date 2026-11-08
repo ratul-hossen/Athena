@@ -1,0 +1,38 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <!-- Background Circle -->
+    <path
+        android:fillColor="#2b1d14"
+        android:pathData="M32,0 A32,32 0 1,1 31.99,0 Z" />
+    <!-- White Head Feathers -->
+    <path
+        android:fillColor="#f3efe6"
+        android:pathData="M8,66 C7,50 9,36 17,26 C24,17 35,13 44,16 C49,18 52,21 53,25 L49,32 C43,34 39,38 37,44 C35,51 35,58 37,66 Z" />
+    <!-- Lower Feathers Accent -->
+    <path
+        android:fillColor="#e2dccf"
+        android:pathData="M16,66 L19,56 L22,64 L26,54 L29,64 L32,55 L34,66 Z" />
+    <!-- Hooked Gold Beak -->
+    <path
+        android:fillColor="#f5b301"
+        android:pathData="M47,20 C55,19 61,24 61,31 C61,36 58,39 55,38 C56,35 55,32 52,32 L45,33 C46,28 46,24 47,20 Z" />
+    <!-- Beak Shadow -->
+    <path
+        android:fillColor="#c98a00"
+        android:pathData="M45,33 L52,32 C54,32 55,33 55,35 C51,35 48,35 45,33 Z" />
+    <!-- Eye Base -->
+    <path
+        android:fillColor="#f5b301"
+        android:pathData="M41,21 A3,3 0 1,1 40.99,21 Z" />
+    <!-- Pupil -->
+    <path
+        android:fillColor="#111111"
+        android:pathData="M41.6,22.4 A1.6,1.6 0 1,1 41.59,22.4 Z" />
+    <!-- Eagle Brow Line -->
+    <path
+        android:fillColor="#2b1d14"
+        android:pathData="M34,20.5 C38,19.5 43,19.5 47,21.5 L46,22.6 C42,21.4 38,21.4 34.6,22.4 Z" />
+</vector>
