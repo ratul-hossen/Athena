@@ -1,8 +1,9 @@
+import os
 import re
 import urllib.request
 import urllib.error
 import json
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from backend.app.config import settings
 
 try:
@@ -45,6 +46,9 @@ async def call_tg_method(method: str, payload: Dict[str, Any]) -> Optional[Dict[
 async def send_typing(chat_id: str):
     await call_tg_method("sendChatAction", {"chat_id": chat_id, "action": "typing"})
 
+async def send_upload_photo_action(chat_id: str):
+    await call_tg_method("sendChatAction", {"chat_id": chat_id, "action": "upload_photo"})
+
 async def send_message(
     chat_id: str,
     text: str,
@@ -86,11 +90,25 @@ async def send_document(
 
 async def send_photo(
     chat_id: str,
-    photo_bytes: bytes,
+    photo_input: Union[bytes, str],
     caption: Optional[str] = None
 ) -> Optional[str]:
-    """Uploads a photo to a Telegram chat or storage channel."""
+    """Uploads a photo to a Telegram chat or storage channel. Accepts raw bytes or local file path."""
     if not is_telegram_configured():
+        return None
+
+    if isinstance(photo_input, str):
+        if os.path.exists(photo_input):
+            try:
+                with open(photo_input, "rb") as f:
+                    photo_bytes = f.read()
+            except Exception:
+                return None
+        else:
+            return None
+    elif isinstance(photo_input, bytes):
+        photo_bytes = photo_input
+    else:
         return None
 
     url = f"{get_base_url()}/sendPhoto"

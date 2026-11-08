@@ -22,11 +22,31 @@ from backend.app.memory.retrieval import retrieve_relevant_facts
 from backend.app.memory.facts import extract_and_save_facts
 from backend.app.memory.actions import parse_and_strip_actions, handle_note_action, handle_alarm_action
 from backend.app.voice.stt import transcribe_audio_groq
-from backend.app.telegram.api import send_message, send_typing, download_file_by_id
+from backend.app.telegram.api import send_message, send_typing, send_photo, send_upload_photo_action, download_file_by_id
 from backend.app.telegram.backup import run_database_backup
 from backend.app.llm.chat import chat_stream
+from backend.app.images.generator import generate_athina_image_nanobanana
 
 TELEGRAM_SESSION_ID = "session_main_telegram_ratul"
+
+def is_photo_request(text: str) -> bool:
+    """Detects whether user is asking for a photo, selfie, or picture."""
+    t = text.lower().strip()
+    if t in ("/pic", "/photo", "/selfie"):
+        return True
+    triggers = ["picture", "selfie", "pic", "photo", "pics", "photos"]
+    intents = ["send", "show", "see", "want", "let me", "give", "share", "snap", "take"]
+    for trig in triggers:
+        if trig in t:
+            for intent in intents:
+                if intent in t:
+                    return True
+    phrases = [
+        "send me your picture", "send a selfie", "send me a selfie",
+        "let me see your pic", "let me see you", "want to see you",
+        "send me pic", "send pic", "show me yourself", "send me your photo"
+    ]
+    return any(p in t for p in phrases)
 
 async def handle_telegram_update(update: Dict[str, Any]):
     """Dispatches incoming Telegram updates (messages, voice, commands)."""
@@ -76,11 +96,24 @@ async def handle_telegram_update(update: Dict[str, Any]):
                 "You can chat with me here or in our Android app. We share the same memory, "
                 "so whatever you tell me here, I'll remember everywhere.\n\n"
                 "Commands:\n"
+                "• /pic - Get a photo of me right now in my current mood & location\n"
                 "• /status - My current mood & state\n"
                 "• /backup - Trigger an offsite database backup\n"
-                "• Send me any voice note or text message!"
+                "• Or just ask me: 'Send me your picture' or 'Send a selfie' anytime!"
             )
             await send_message(chat_id, welcome)
+            return
+
+        elif cmd in ("/pic", "/photo", "/selfie"):
+            await send_upload_photo_action(chat_id)
+            state = PersonalityState.calculate_current_state()
+            prompt = f"RAW photo of athina_woman, selfie, {state.location}, {state.mood}, ambient warm lighting, photorealistic"
+            img_result = await generate_athina_image_nanobanana(prompt)
+            caption = f"📸 Here I am for you, Ratul... in the {state.location} thinking of you. 💖"
+            if img_result.get("local_path"):
+                await send_photo(chat_id, img_result["local_path"], caption=caption)
+            else:
+                await send_message(chat_id, "I tried to take a photo for you, but my camera fluttered. Ask me again in a moment!")
             return
 
         elif cmd == "/status":
@@ -166,6 +199,19 @@ async def handle_telegram_update(update: Dict[str, Any]):
 
         # Send text reply to Telegram
         await send_message(chat_id, clean_text)
+
+        # Check if Ratul requested a picture or if Athina triggered an image
+        wants_photo = is_photo_request(text) or bool(image_prompt)
+        if wants_photo:
+            try:
+                await send_upload_photo_action(chat_id)
+                photo_prompt = image_prompt or f"RAW photo of athina_woman, selfie, {state.location}, {state.mood}, photorealistic"
+                img_result = await generate_athina_image_nanobanana(photo_prompt)
+                if img_result.get("local_path"):
+                    caption = f"📸 For you, Ratul • {state.location}"
+                    await send_photo(chat_id, img_result["local_path"], caption=caption)
+            except Exception:
+                pass
 
         # Execute note actions if any
         async with async_session_factory() as db:
