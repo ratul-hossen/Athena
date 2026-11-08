@@ -27,12 +27,14 @@ import {
   RotateCcw,
   Edit2,
   Lock,
+  LogOut,
   Menu,
   X,
   Flame,
   Info
 } from "lucide-react";
 import { adminApi, IdentityConfig, getAdminToken, setAdminToken } from "../lib/api";
+import { isSessionUnlocked, unlockSession, lockSession, computeSha256, getExpectedHash } from "../lib/auth";
 
 type Tab = "identity" | "overview" | "memories" | "notes_alarms" | "keypool";
 
@@ -117,7 +119,13 @@ export default function AdminDashboard() {
   const [copied, setCopied] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
-  // Auth Dialog State
+  // Master Gatekeeper Authentication State
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+  const [unlocking, setUnlocking] = useState<boolean>(false);
+  const [masterPassword, setMasterPassword] = useState<string>("");
+  const [authError, setAuthError] = useState<string>("");
+
+  // Auth Dialog State (Token Settings)
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [adminTokenInput, setAdminTokenInput] = useState<string>("");
 
@@ -181,7 +189,13 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadAllData();
+    if (isSessionUnlocked()) {
+      setIsUnlocked(true);
+      loadAllData();
+    } else {
+      setIsUnlocked(false);
+      setLoading(false);
+    }
 
     // Listen for 401/403 auth events
     const handleAuthReq = () => {
@@ -190,6 +204,43 @@ export default function AdminDashboard() {
     window.addEventListener("athina_auth_required", handleAuthReq);
     return () => window.removeEventListener("athina_auth_required", handleAuthReq);
   }, []);
+
+  const handleMasterUnlock = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!masterPassword.trim()) {
+      setAuthError("Please enter Master Password");
+      return;
+    }
+
+    setUnlocking(true);
+    setAuthError("");
+
+    try {
+      const computedHash = await computeSha256(masterPassword.trim());
+      const expected = getExpectedHash();
+
+      if (computedHash === expected) {
+        unlockSession(masterPassword.trim());
+        setIsUnlocked(true);
+        setMasterPassword("");
+        notify("Master access verified. Athina Core unlocked.");
+        loadAllData();
+      } else {
+        setAuthError("Access Denied: Invalid Master Password.");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Cryptographic verification failed");
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  const handleLockSystem = () => {
+    lockSession();
+    setIsUnlocked(false);
+    setMasterPassword("");
+    notify("Athina Core session locked.");
+  };
 
   const handleSaveAuthToken = () => {
     if (!adminTokenInput.trim()) return;
@@ -247,6 +298,108 @@ export default function AdminDashboard() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // ---------------------------------------------------------------------------
+  // MASTER GATEKEEPER LOCK SCREEN (VERCEL DEPLOYMENT PROTECTION)
+  // ---------------------------------------------------------------------------
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-zinc-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
+        {/* Toast Notification */}
+        {notification && (
+          <div
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md transition-all ${
+              notification.type === "success"
+                ? "bg-zinc-900/90 border-amber-500/50 text-amber-300"
+                : "bg-red-950/90 border-red-500/50 text-red-300"
+            }`}
+          >
+            {notification.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 text-amber-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            )}
+            <span className="text-sm font-medium">{notification.text}</span>
+          </div>
+        )}
+
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-md bg-[#121215] border border-zinc-800/80 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="relative">
+              <EagleMark size={64} />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 border-2 border-[#121215] flex items-center justify-center text-black shadow-lg">
+                <Lock className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono font-medium mb-1.5">
+                ATHINA COMPANION CORE
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-zinc-100">Master Authentication</h1>
+              <p className="text-xs text-zinc-400 mt-1">
+                Protected by client-side SHA-256 cryptographic guard. Enter your Master Password to unlock.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleMasterUnlock} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                <span>Master Password</span>
+                <span className="text-[10px] text-zinc-500 font-mono">SHA-256 Hash Guard</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  autoFocus
+                  value={masterPassword}
+                  onChange={(e) => {
+                    setMasterPassword(e.target.value);
+                    if (authError) setAuthError("");
+                  }}
+                  placeholder="Enter Master Password..."
+                  className="w-full px-4 py-3 rounded-xl bg-zinc-900/90 border border-zinc-700/80 text-sm focus:outline-none focus:border-amber-500 text-zinc-100 placeholder:text-zinc-600 transition-all font-mono"
+                />
+              </div>
+            </div>
+
+            {authError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={unlocking}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {unlocking ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Verifying Hash...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Unlock Athina Core</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Owner: <strong className="text-zinc-300 font-normal">Md Ratul Hossen</strong></span>
+            <span className="font-mono text-[10px]">Vercel Protected</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#0d0d0e] text-zinc-100 font-sans antialiased overflow-hidden">
@@ -408,13 +561,22 @@ export default function AdminDashboard() {
               <span className="text-zinc-400">Owner mode:</span>
               <span className="text-emerald-400 font-medium">Online</span>
             </div>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="text-zinc-500 hover:text-amber-400 transition-colors"
-              title="Admin Token Settings"
-            >
-              <Lock className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="p-1 text-zinc-500 hover:text-amber-400 transition-colors"
+                title="Admin Token Settings"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleLockSystem}
+                className="p-1 text-zinc-500 hover:text-rose-400 transition-colors"
+                title="Lock Session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <a
