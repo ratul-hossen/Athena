@@ -132,11 +132,8 @@ backend/static/images/*.tmp
 mercy.txt
 
 # ------------------------------------------------------------------------------
-# 8. REFERENCE IMAGES (too large for Git — deploy via rsync/scp separately)
+# 8. RAW DATASET & RUNTIME GENERATED IMAGES
 # ------------------------------------------------------------------------------
-imagegen/curated/**/*.jpg
-imagegen/curated/**/*.jpeg
-imagegen/curated/**/*.png
 imagegen/athina_image_dataset/
 backend/static/images/*
 !backend/static/images/.gitkeep
