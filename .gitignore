@@ -136,3 +136,6 @@ mercy.txt
 imagegen/curated/**/*.jpg
 imagegen/curated/**/*.jpeg
 imagegen/curated/**/*.png
+imagegen/athina_image_dataset/
+backend/static/images/*
+!backend/static/images/.gitkeep
