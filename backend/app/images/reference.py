@@ -77,6 +77,7 @@ def find_best_reference(prompt: str) -> Dict[str, Any]:
         "image_path": full_path if os.path.exists(full_path) else None,
         "filename": fname,
         "group": group,
+        "reference_url": f"/static/references/{group}/{fname}" if fname else None,
         "prompt_dna": chosen.get("detailed_prompt", ""),
         "facial_features": chosen.get("facial_features", {}),
         "body_anatomy": chosen.get("body_anatomy", {})

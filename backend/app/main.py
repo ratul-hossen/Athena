@@ -72,6 +72,11 @@ static_images_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../
 os.makedirs(static_images_dir, exist_ok=True)
 app.mount("/static/images", StaticFiles(directory=static_images_dir), name="static_images")
 
+# Mount curated reference images directory for Nano Banana & consistent identity references
+curated_references_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../imagegen/curated"))
+if os.path.exists(curated_references_dir):
+    app.mount("/static/references", StaticFiles(directory=curated_references_dir), name="static_references")
+
 @app.get("/")
 async def root():
     return {

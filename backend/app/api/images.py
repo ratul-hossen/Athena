@@ -31,10 +31,13 @@ async def get_gallery_samples(limit: int = 20):
     manifest = load_manifest()
     samples = []
     for item in manifest[:limit]:
+        group = item.get("group")
+        filename = item.get("filename")
         samples.append({
             "id": item.get("id"),
-            "filename": item.get("filename"),
-            "group": item.get("group"),
+            "filename": filename,
+            "group": group,
+            "url": f"/static/references/{group}/{filename}",
             "caption": item.get("detailed_prompt"),
             "tags": item.get("tags")
         })

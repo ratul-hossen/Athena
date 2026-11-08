@@ -45,6 +45,7 @@ async def generate_athina_image_nanobanana(
         "image_url": relative_url,
         "local_path": output_path,
         "reference_used": ref.get("filename"),
+        "reference_url": ref.get("reference_url"),
         "group": ref.get("group"),
         "prompt": prompt,
         "dna_summary": ref.get("prompt_dna")
