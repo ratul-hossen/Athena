@@ -1,0 +1,22 @@
+name: Athina 24/7 Keep-Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render free-tier spin-down (inactivity timeout is 15 mins)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-athina:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Athina Core Engine
+        run: |
+          echo "Pinging Athina Core Health Endpoint..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://athena-4i17.onrender.com/api/health)
+          echo "Athina Health Response Code: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "Athina is Online and Active!"
+          else
+            echo "Warning: Response code $STATUS"
+          fi

@@ -22,8 +22,8 @@ android {
             useSupportLibrary = true
         }
 
-        // Configure default backend API URL (Oracle VM or local emulator 10.0.2.2)
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"")
+        // Configure production cloud backend API URL (Render 24/7)
+        buildConfigField("String", "BASE_URL", "\"https://athena-4i17.onrender.com/\"")
     }
 
     buildTypes {

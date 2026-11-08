@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://athena-4i17.onrender.com";
 
 export function getAdminToken(): string {
   if (typeof window !== "undefined") {
