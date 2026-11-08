@@ -137,3 +137,4 @@ mercy.txt
 imagegen/athina_image_dataset/
 backend/static/images/*
 !backend/static/images/.gitkeep
+.neon

@@ -62,6 +62,20 @@ try:
         modal_token_secret: str = Field(default="", alias="MODAL_TOKEN_SECRET")
 
         @property
+        def async_database_url(self) -> str:
+            url = self.database_url
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if "channel_binding=" in url:
+                import re
+                url = re.sub(r"[&?]channel_binding=[^&]*", "", url)
+                if "?" not in url and "&" in url:
+                    url = url.replace("&", "?", 1)
+            return url
+
+        @property
         def parsed_gemini_keys(self) -> List[str]:
             return [k.strip() for k in self.gemini_api_keys.split(",") if k.strip()]
 
@@ -100,6 +114,20 @@ except ImportError:
             self.image_daily_limit = int(os.getenv("IMAGE_DAILY_LIMIT", "20"))
             self.modal_token_id = os.getenv("MODAL_TOKEN_ID", "")
             self.modal_token_secret = os.getenv("MODAL_TOKEN_SECRET", "")
+
+        @property
+        def async_database_url(self) -> str:
+            url = self.database_url
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if "channel_binding=" in url:
+                import re
+                url = re.sub(r"[&?]channel_binding=[^&]*", "", url)
+                if "?" not in url and "&" in url:
+                    url = url.replace("&", "?", 1)
+            return url
 
         @property
         def parsed_gemini_keys(self) -> List[str]:
