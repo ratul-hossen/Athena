@@ -3,10 +3,12 @@ import math
 import os
 import re
 from collections import Counter
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from backend.app.personality.state import PersonalityState
 
-MODEL_PATH = "/home/ratul/Athena/ml/exports/classifier_model.json"
+MODEL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../../ml/exports/classifier_model.json")
+)
 
 _loaded_model = None
 
