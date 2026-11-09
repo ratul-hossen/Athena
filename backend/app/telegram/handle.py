@@ -34,8 +34,11 @@ def is_photo_request(text: str) -> bool:
     t = text.lower().strip()
     if t in ("/pic", "/photo", "/selfie"):
         return True
-    triggers = ["picture", "selfie", "pic", "photo", "pics", "photos"]
-    intents = ["send", "show", "see", "want", "let me", "give", "share", "snap", "take"]
+    triggers = ["picture", "selfie", "pic", "photo", "pics", "photos", "chobi", "ছবি"]
+    intents = [
+        "send", "show", "see", "want", "let me", "give", "share", "snap", "take",
+        "dao", "de", "pathao", "dekhi", "dekhte", "দাও", "পাঠাও"
+    ]
     for trig in triggers:
         if trig in t:
             for intent in intents:
@@ -44,9 +47,72 @@ def is_photo_request(text: str) -> bool:
     phrases = [
         "send me your picture", "send a selfie", "send me a selfie",
         "let me see your pic", "let me see you", "want to see you",
-        "send me pic", "send pic", "show me yourself", "send me your photo"
+        "send me pic", "send pic", "show me yourself", "send me your photo",
+        "chobi dao", "chobi pathao", "pic dao", "pic de", "photo dao"
     ]
     return any(p in t for p in phrases)
+
+def extract_photo_scene_and_caption(
+    user_text: str,
+    image_prompt: Optional[str],
+    state: PersonalityState
+) -> tuple[str, str]:
+    """
+    Extracts the visual description and caption for Athina photo generation.
+    Honors user's specific outfit, location, or pose requests.
+    """
+    clean_user = user_text.lower().strip()
+    strip_phrases = [
+        "/pic", "/photo", "/selfie",
+        "i want to see you now, send me pic",
+        "i want to see you now",
+        "i want to see you",
+        "let me see your pic",
+        "let me see you",
+        "send me your picture now",
+        "send me your picture",
+        "send me your pic",
+        "send me your photo",
+        "send me a selfie",
+        "send me a photo",
+        "send a selfie",
+        "send selfie",
+        "send me pic",
+        "send pic",
+        "send photo",
+        "show me a picture",
+        "show me yourself",
+        "can you send me a picture",
+        "can you send me a photo",
+        "will you wear it and send me picture",
+        "will you wear it and send picture",
+        "and send me picture",
+        "and send picture",
+        "picture pathao",
+        "chobi pathao",
+        "ekta chobi dao",
+        "photo dao",
+        "pic dao",
+        "pic de"
+    ]
+    for p in strip_phrases:
+        clean_user = clean_user.replace(p, "").strip()
+
+    clean_user = clean_user.strip(" ,.?!'\"")
+
+    # If Ratul explicitly requested an attire or action (e.g. "wearing burka", "in saree")
+    if len(clean_user) >= 3 and clean_user not in ("now", "please", "today", "pic", "photo", "selfie"):
+        scene = clean_user
+        caption = f"📸 For you, Ratul • {clean_user.capitalize()}"
+    elif image_prompt and len(image_prompt.strip()) >= 5:
+        scene = image_prompt.strip()
+        clean_scene = scene.replace("photo of athina_woman,", "").replace("photo of athina_woman", "").strip()
+        caption = f"📸 For you, Ratul • {clean_scene.capitalize() if clean_scene else state.location}"
+    else:
+        scene = f"casual selfie, smiling, in {state.location}, {state.mood}"
+        caption = f"📸 Here I am for you, Ratul... in the {state.location} thinking of you. 💖"
+
+    return scene, caption
 
 async def handle_telegram_update(update: Dict[str, Any]):
     """Dispatches incoming Telegram updates (messages, voice, commands)."""
@@ -107,10 +173,9 @@ async def handle_telegram_update(update: Dict[str, Any]):
         elif cmd in ("/pic", "/photo", "/selfie"):
             await send_upload_photo_action(chat_id)
             state = PersonalityState.calculate_current_state()
-            prompt = f"RAW photo of athina_woman, selfie, {state.location}, {state.mood}, ambient warm lighting, photorealistic"
-            img_result = await generate_athina_image_nanobanana(prompt)
-            caption = f"📸 Here I am for you, Ratul... in the {state.location} thinking of you. 💖"
-            if img_result.get("local_path"):
+            scene, caption = extract_photo_scene_and_caption(text, None, state)
+            img_result = await generate_athina_image_nanobanana(scene)
+            if img_result.get("local_path") and os.path.exists(img_result["local_path"]):
                 await send_photo(chat_id, img_result["local_path"], caption=caption)
             else:
                 await send_message(chat_id, "I tried to take a photo for you, but my camera fluttered. Ask me again in a moment!")
@@ -205,10 +270,9 @@ async def handle_telegram_update(update: Dict[str, Any]):
         if wants_photo:
             try:
                 await send_upload_photo_action(chat_id)
-                photo_prompt = image_prompt or f"RAW photo of athina_woman, selfie, {state.location}, {state.mood}, photorealistic"
-                img_result = await generate_athina_image_nanobanana(photo_prompt)
-                if img_result.get("local_path"):
-                    caption = f"📸 For you, Ratul • {state.location}"
+                scene, caption = extract_photo_scene_and_caption(text, image_prompt, state)
+                img_result = await generate_athina_image_nanobanana(scene)
+                if img_result.get("local_path") and os.path.exists(img_result["local_path"]):
                     await send_photo(chat_id, img_result["local_path"], caption=caption)
             except Exception:
                 pass
